@@ -1,2 +1,1 @@
-def test():
-    print('It\'s Alive!')
+from .prepare_analysis import prepare_analysis
