@@ -1,58 +1,40 @@
-import abc
+import pathlib
 
 
-class Analysis(abc.ABC):
+class Analysis(object):
 
     def __init__(self, args):
-        self._n_threads = args['threads']
+        self.skip_first_pass = False
+        self.dir = pathlib.Path('.') if args['dir'] is None else args['dir']
+        self.ms_dir = (self.dir / 'MS') if args['dir'] is None else args['ms_dir']
+        self.input_file = (self.dir / 'input.os') if args['dir'] is None else args['input_file']
+        self.out = args['out']
+        self.__n_threads = args['threads']
+        assert self.__n_threads > 0
 
     def n_threads(self):
-        return self._n_threads
-
-    @abc.abstractmethod
-    def n_passes(self):
-        pass
-
-    @abc.abstractmethod
-    def n_iterations(self):
-        pass
-
-    @abc.abstractmethod
-    def setup(self, pass_idx):
-        pass
-
-    @abc.abstractmethod
-    def do_pass(self, pass_idx, iteration):
-        pass
-
-    @abc.abstractmethod
-    def merge(self, pass_idx, result, new_result):
-        pass
-
-    @abc.abstractmethod
-    def finalize(self, pass_idx):
-        pass
-
-
-class AnalysisTest(Analysis):
-
-    def __init__(self, args):
-        super().__init__(args)
-
-    def n_passes(self):
-        return 1
+        return self.__n_threads
 
     def n_iterations(self):
-        return 10
+        pass
 
-    def setup(self, pass_idx):
-        print('setting up pass', pass_idx)
+    def setup_first_pass(self):
+        pass
 
-    def do_pass(self, pass_idx, iteration):
-        print('pass', pass_idx, 'iteration', iteration)
+    def do_first_pass(self, iteration):
+        pass
 
-    def merge(self, pass_idx, result, new_result):
-        return {}
+    def merge_first_pass(self, result, new_result):
+        pass
 
-    def finalize(self, pass_idx, result):
-        print('finalizing', pass_idx)
+    def finalize_first_pass(self, result):
+        pass
+
+    def setup_second_pass(self):
+        pass
+
+    def do_second_pass(self, iteration):
+        pass
+
+    def finalize_second_pass(self):
+        pass

@@ -1,31 +1,43 @@
 #!/usr/bin/env python3
 
 
-import functools
+import matplotlib
 import multiprocessing
 import osiris_analyze
+
+
+# Use the LaTeX font for matplotlib
+matplotlib.rcParams['mathtext.fontset'] = 'stix'
+matplotlib.rcParams['font.family'] = 'STIXGeneral'
 
 
 def main():
     analysis = osiris_analyze.prepare_analysis()
     if analysis.n_threads() == 1:
-        for pass_idx in range(analysis.n_passes()):
-            analysis.setup(pass_idx)
-            result = None
+        if not analysis.skip_first_pass:
+            analysis.setup_first_pass()
+            first_pass_result = None
             for iteration in range(analysis.n_iterations()):
-                pass_result = analysis.do_pass(pass_idx, iteration)
-                result = analysis.merge(pass_idx, result, pass_result)
-            analysis.finalize(pass_idx, result)
+                first_pass_result_new = analysis.do_first_pass(iteration)
+                first_pass_result = analysis.merge_first_pass(first_pass_result, first_pass_result_new)
+            analysis.finalize_first_pass(first_pass_result)
+        analysis.setup_second_pass()
+        for iteration in range(analysis.n_iterations()):
+            analysis.do_second_pass(iteration)
+        analysis.finalize_second_pass()
     else:
-        multiprocessing.set_start_method('spawn') # This is what's recommended on NERSC
+        multiprocessing.set_start_method('spawn') # this is recommended for NERSC
         with multiprocessing.Pool(analysis.n_threads()) as pool:
-            for pass_idx in range(analysis.n_passes()):
-                analysis.setup(pass_idx)
-                pass_partial = functools.partial(analysis.do_pass, pass_idx)
-                result = None
-                for pass_result in pool.imap_unordered(pass_partial, range(analysis.n_iterations())):
-                    result = analysis.merge(pass_idx, result, pass_result)
-                analysis.finalize(pass_idx, result)
+            if not analysis.skip_first_pass:
+                analysis.setup_first_pass()
+                first_pass_result = None
+                for first_pass_result_new in pool.imap_unordered(analysis.do_first_pass, range(analysis.n_iterations())):
+                    first_pass_result = analysis.merge_first_pass(first_pass_result, first_pass_result_new)
+                analysis.finalize_first_pass(first_pass_result)
+            analysis.setup_second_pass()
+            for _ in pool.imap_unordered(analysis.do_second_pass, range(analysis.n_iterations())):
+                pass
+            analysis.finalize_second_pass()
 
 
 if __name__ == '__main__':
